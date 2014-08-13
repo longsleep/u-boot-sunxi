@@ -641,13 +641,15 @@ sunxi_simplefb_clocks(void *blob, int node_simplefb)
 		return;
 	}
 
-	if (!fdt_stringlist_contains(stringlist, stringlength, "ahb_de_be0")) {
+	if (!fdt_stringlist_contains(stringlist, stringlength, "ahb_de_be") &&
+	    !fdt_stringlist_contains(stringlist, stringlength, "ahb_de_be0")) {
 		printf("%s: unable to find ahb gating bit %s\n", __func__,
 		       "ahb_de_be0");
 		return;
 	}
 
-	if (!fdt_stringlist_contains(stringlist, stringlength, "ahb_lcd0")) {
+	if (!fdt_stringlist_contains(stringlist, stringlength, "ahb_lcd") &&
+	    !fdt_stringlist_contains(stringlist, stringlength, "ahb_lcd0")) {
 		printf("%s: unable to find ahb gating bit %s\n", __func__,
 		       "ahb_lcd0");
 		return;
