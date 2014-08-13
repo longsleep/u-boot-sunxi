@@ -257,7 +257,7 @@ sunxi_composer_mode_set(struct fb_videomode *mode, unsigned int address)
 }
 
 static void
-sunxi_lcdc_pll_set(int dotclock)
+sunxi_lcdc_pll_set(int dotclock, int *clk_div, int *clk_double)
 {
 	void *ccmu = (void *) SUNXI_CCM_BASE;
 	int value, n, m, diff;
@@ -360,6 +360,9 @@ sunxi_lcdc_pll_set(int dotclock)
 	sunxi_io_mask(ccmu, SUNXI_LCDC0_CH1_CLK, 0, 0x0800);
 
 	sunxi_io_mask(ccmu, SUNXI_LCDC0_CH1_CLK, 0x80008000, 0x80008000);
+
+	*clk_div = best_m;
+	*clk_double = best_double;
 }
 
 static void
@@ -408,7 +411,7 @@ sunxi_lcdc_init(void)
 }
 
 static void
-sunxi_lcdc_mode_set(struct fb_videomode *mode)
+sunxi_lcdc_mode_set(struct fb_videomode *mode, int *clk_div, int *clk_double)
 {
 	void *lcdc = (void *) SUNXI_LCD0_BASE;
 	int total;
@@ -441,15 +444,14 @@ sunxi_lcdc_mode_set(struct fb_videomode *mode)
 	sunxi_io_write(lcdc, SUNXI_LCDC_TCON1_TIMING_SYNC,
 		       ((mode->hsync_len - 1) << 16) | (mode->vsync_len - 1));
 
-	sunxi_lcdc_pll_set(mode->pixclock);
+	sunxi_lcdc_pll_set(mode->pixclock, clk_div, clk_double);
 }
 
 static void
-sunxi_hdmi_mode_set(struct fb_videomode *mode)
+sunxi_hdmi_mode_set(struct fb_videomode *mode, int clk_div, int clk_double)
 {
-	void *ccmu = (void *) SUNXI_CCM_BASE;
 	void *hdmi = (void *) SUNXI_HDMI_BASE;
-	int h, v, tmp;
+	int h, v;
 
 	sunxi_io_write(hdmi, SUNXI_HDMI_INT_CTRL, 0xFFFFFFFF);
 	sunxi_io_write(hdmi, SUNXI_HDMI_VIDEO_POLARITY, 0x03FE0000);
@@ -458,14 +460,10 @@ sunxi_hdmi_mode_set(struct fb_videomode *mode)
 	sunxi_io_write(hdmi, SUNXI_HDMI_TX_DRIVER2, 0xD2000008);
 	sunxi_io_write(hdmi, SUNXI_HDMI_TX_DRIVER3, 0);
 
-	/* use video0 */
+	/* Use PLL3, setup clk div and doubler */
 	sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER3, 0, 0x00200000);
-
-	tmp = sunxi_io_read(ccmu, SUNXI_LCDC0_CH1_CLK);
-	sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER2,
-		      ((tmp & 0x0F) + 1) << 4, 0xF0);
-
-	if (tmp & 0x02000000)
+	sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER2, clk_div << 4, 0xf0);
+	if (clk_double)
 		sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER1, 0, 0x40);
 	else
 		sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER1, 0x40, 0x40);
@@ -509,14 +507,15 @@ sunxi_mode_set(struct fb_videomode *mode, unsigned int address)
 	void *composer = (void *) SUNXI_DE_BE0_BASE;
 	void *lcdc = (void *) SUNXI_LCD0_BASE;
 	void *hdmi = (void *) SUNXI_HDMI_BASE;
+	int clk_div, clk_double;
 
 	sunxi_io_mask(hdmi, SUNXI_HDMI_VIDEO_CTRL, 0, 0x80000000);
 	sunxi_io_mask(lcdc, SUNXI_LCDC_ENABLE, 0, 0x80000000);
 	sunxi_io_mask(composer, SUNXI_COMP_MODE, 0, 0x02);
 
 	sunxi_composer_mode_set(mode, address);
-	sunxi_lcdc_mode_set(mode);
-	sunxi_hdmi_mode_set(mode);
+	sunxi_lcdc_mode_set(mode, &clk_div, &clk_double);
+	sunxi_hdmi_mode_set(mode, clk_div, clk_double);
 
 	sunxi_io_mask(composer, SUNXI_COMP_REG_CTL, 0x01, 0x01);
 	sunxi_io_mask(composer, SUNXI_COMP_MODE, 0x02, 0x02);
