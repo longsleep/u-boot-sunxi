@@ -467,10 +467,15 @@ sunxi_hdmi_mode_set(struct fb_videomode *mode, int clk_div, int clk_double)
 	/* Use PLL3, setup clk div and doubler */
 	sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER3, 0, 0x00200000);
 	sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER2, clk_div << 4, 0xf0);
-	if (clk_double)
+	if (clk_double) {
 		sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER1, 0, 0x40);
-	else
+	} else {
 		sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER1, 0x40, 0x40);
+#ifndef CONFIG_SUN4I
+		/* Tweak fifo prefetch for non doubled non sun4i */
+		sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER1, 0x700, 0xf00);
+#endif
+	}
 
 	sunxi_io_write(hdmi, SUNXI_HDMI_VIDEO_SIZE,
 		       ((mode->yres - 1) << 16) | (mode->xres - 1));
