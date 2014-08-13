@@ -30,6 +30,12 @@
 #include <asm/global_data.h>
 #include <video_fb.h>
 #include <linux/fb.h>
+#include <asm/arch-sunxi/sunxi_display.h>
+
+/* for simplefb */
+#ifdef CONFIG_OF_BOARD_SETUP
+#include <libfdt.h>
+#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -579,3 +585,58 @@ video_hw_init(void)
 
 	return graphic_device;
 }
+
+/*
+ * Simplefb support.
+ */
+#if defined(CONFIG_OF_BOARD_SETUP) && defined(CONFIG_VIDEO_DT_SIMPLEFB)
+void
+sunxi_simplefb_setup(void *blob)
+{
+	static GraphicDevice *graphic_device = sunxi_display->graphic_device;
+	const char *name = "simple-framebuffer";
+	const char *format = "x8r8g8b8";
+	fdt32_t cells[2];
+	int offset, stride, ret;
+
+	if (!sunxi_display->enabled)
+		return;
+
+	offset = fdt_add_subnode(blob, 0, "framebuffer");
+	if (offset < 0) {
+		printf("%s: add subnode failed", __func__);
+		return;
+	}
+
+	ret = fdt_setprop(blob, offset, "compatible", name, strlen(name) + 1);
+	if (ret < 0)
+		return;
+
+	stride = graphic_device->winSizeX * graphic_device->gdfBytesPP;
+
+	cells[0] = cpu_to_fdt32(gd->fb_base);
+	cells[1] = cpu_to_fdt32(CONFIG_SUNXI_FB_SIZE);
+	ret = fdt_setprop(blob, offset, "reg", cells, sizeof(cells[0]) * 2);
+	if (ret < 0)
+		return;
+
+	cells[0] = cpu_to_fdt32(graphic_device->winSizeX);
+	ret = fdt_setprop(blob, offset, "width", cells, sizeof(cells[0]));
+	if (ret < 0)
+		return;
+
+	cells[0] = cpu_to_fdt32(graphic_device->winSizeY);
+	ret = fdt_setprop(blob, offset, "height", cells, sizeof(cells[0]));
+	if (ret < 0)
+		return;
+
+	cells[0] = cpu_to_fdt32(stride);
+	ret = fdt_setprop(blob, offset, "stride", cells, sizeof(cells[0]));
+	if (ret < 0)
+		return;
+
+	ret = fdt_setprop(blob, offset, "format", format, strlen(format) + 1);
+	if (ret < 0)
+		return;
+}
+#endif /* CONFIG_OF_BOARD_SETUP && CONFIG_VIDEO_DT_SIMPLEFB */

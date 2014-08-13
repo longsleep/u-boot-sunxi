@@ -26,6 +26,10 @@
 #include <asm/io.h>
 #include <net.h>
 
+#ifdef CONFIG_VIDEO
+#include <asm/arch-sunxi/sunxi_display.h>
+#endif
+
 DECLARE_GLOBAL_DATA_PTR;
 
 /* add board specific code here */
@@ -185,3 +189,13 @@ int misc_init_r(void)
 	return 0;
 }
 #endif
+
+#ifdef CONFIG_OF_BOARD_SETUP
+void
+ft_board_setup(void *blob, bd_t *bd)
+{
+#ifdef CONFIG_VIDEO_DT_SIMPLEFB
+	sunxi_simplefb_setup(blob);
+#endif
+}
+#endif /* CONFIG_OF_BOARD_SETUP */
