@@ -533,6 +533,7 @@ void *
 video_hw_init(void)
 {
 	static GraphicDevice *graphic_device = sunxi_display->graphic_device;
+#if 1
 	/*
 	 * Vesa standard 1024x768@60
 	 * 65.0  1024 1032 1176 1344  768 771 777 806  -hsync -vsync
@@ -553,6 +554,25 @@ video_hw_init(void)
 		.vmode = 0,
 		.flag = 0,
 	};
+#else
+	/* 1920x1080@60 */
+	struct fb_videomode mode = {
+		.name = "1920x1080",
+		.refresh = 60,
+		.xres = 1920,
+		.yres = 1080,
+		.pixclock = 148500,
+		.left_margin = 88,
+		.right_margin = 148,
+		.upper_margin = 36,
+		.lower_margin = 4,
+		.hsync_len = 44,
+		.vsync_len = 5,
+		.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+		.vmode = FB_VMODE_NONINTERLACED,
+		.flag = 0,
+	};
+#endif
 	int ret;
 
 	memset(sunxi_display, 0, sizeof(struct sunxi_display));
