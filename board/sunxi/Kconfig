@@ -18,3 +18,10 @@ config SYS_SOC
 
 config FTDFILE
 	string "Default ftdfile env setting for this board"
+
+config VIDEO
+	boolean "Enable graphical uboot console on HDMI"
+	default y
+	---help---
+	Say Y here to add support for using a cfb console on the HDMI output
+	found on most sunxi devices.
