@@ -270,7 +270,7 @@ sunxi_lcdc_pll_set(int dotclock, int *clk_div, int *clk_double)
 		return;
 	}
 
-	for (m = 16; m > 0; m--) {
+	for (m = 15; m > 0; m--) {
 		n = (m * dotclock) / 3000;
 
 		if ((n > 9) && (n < 128)) {
