@@ -590,6 +590,89 @@ video_hw_init(void)
  * Simplefb support.
  */
 #if defined(CONFIG_OF_BOARD_SETUP) && defined(CONFIG_VIDEO_DT_SIMPLEFB)
+static void
+sunxi_simplefb_clocks(void *blob, int node_simplefb)
+{
+	const char *compatible[] = {
+		"allwinner,sun4i-a10-ahb-gates-clk",
+		"allwinner,sun5i-a10s-ahb-gates-clk",
+		"allwinner,sun5i-a13-ahb-gates-clk",
+		"allwinner,sun7i-a20-ahb-gates-clk",
+		NULL,
+	};
+	/*
+	 * This currently ignores standalone clocks, like pll3/7, as these
+	 * are still ignored in the dts files.
+	 */
+#define PLACEHOLDER_AHB_GATES 0xFFFFFFFF
+	fdt32_t cells[] = {
+		PLACEHOLDER_AHB_GATES, fdt32_to_cpu(0x24), /* ahb_lcd0 */
+		PLACEHOLDER_AHB_GATES, fdt32_to_cpu(0x2B), /* ahb_hdmi */
+		PLACEHOLDER_AHB_GATES, fdt32_to_cpu(0x2C), /* ahb_de_be0 */
+	};
+	const char *stringlist;
+	int node_clock, i, phandle, stringlength, ret;
+
+	/* Find the ahb_gates node. */
+	for (i = 0; compatible[i]; i++) {
+		node_clock =
+			fdt_node_offset_by_compatible(blob, 0, compatible[i]);
+		if (node_clock >= 0)
+			break;
+	}
+
+	if (!compatible[i]) {
+		eprintf("%s: unable to find ahb_gates device-tree node.\n",
+			__func__);
+		return;
+	}
+
+	/*
+	 * sanity check clock-output-names.
+	 *
+	 * Not that this really matters as one is supposed to reference
+	 * clock gating by actual register bit offsets.
+	 */
+	stringlist = fdt_getprop(blob, node_clock, "clock-output-names",
+				 &stringlength);
+	if (!stringlist) {
+		eprintf("%s: unable to find clock-output-names property.\n",
+			__func__);
+		return;
+	}
+
+	if (!fdt_stringlist_contains(stringlist, stringlength, "ahb_de_be0")) {
+		printf("%s: unable to find ahb gating bit %s\n", __func__,
+		       "ahb_de_be0");
+		return;
+	}
+
+	if (!fdt_stringlist_contains(stringlist, stringlength, "ahb_lcd0")) {
+		printf("%s: unable to find ahb gating bit %s\n", __func__,
+		       "ahb_lcd0");
+		return;
+	}
+
+	if (!fdt_stringlist_contains(stringlist, stringlength, "ahb_hdmi") &&
+	    !fdt_stringlist_contains(stringlist, stringlength, "ahb_hdmi0")) {
+		printf("%s: unable to find ahb gating bit %s\n", __func__,
+		       "ahb_hdmi/ahb_hdmi0");
+		return;
+	}
+
+	/* Now add our actual clocks tuples. */
+	phandle = fdt_get_phandle(blob, node_clock);
+
+	for (i = 0; i < (sizeof(cells) / sizeof(*cells)); i++)
+		if (cells[i] == PLACEHOLDER_AHB_GATES)
+			cells[i] = fdt32_to_cpu(phandle);
+
+	ret = fdt_setprop(blob, node_simplefb, "clocks", cells, sizeof(cells));
+	if (ret)
+		eprintf("%s: fdt_setprop \"clocks\" failed: %d\n",
+			__func__, ret);
+}
+
 void
 sunxi_simplefb_setup(void *blob)
 {
@@ -638,5 +721,7 @@ sunxi_simplefb_setup(void *blob)
 	ret = fdt_setprop(blob, offset, "format", format, strlen(format) + 1);
 	if (ret < 0)
 		return;
+
+	sunxi_simplefb_clocks(blob, offset);
 }
 #endif /* CONFIG_OF_BOARD_SETUP && CONFIG_VIDEO_DT_SIMPLEFB */
