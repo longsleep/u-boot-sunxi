@@ -454,10 +454,14 @@ sunxi_hdmi_mode_set(struct fb_videomode *mode, int clk_div, int clk_double)
 	int h, v;
 
 	sunxi_io_write(hdmi, SUNXI_HDMI_INT_CTRL, 0xFFFFFFFF);
-	sunxi_io_write(hdmi, SUNXI_HDMI_VIDEO_POLARITY, 0x03FE0000);
+	sunxi_io_write(hdmi, SUNXI_HDMI_VIDEO_POLARITY, 0x03e00000);
 	sunxi_io_mask(hdmi, SUNXI_HDMI_TX_DRIVER0, 0xDE000000, 0xDE000000);
+#ifdef CONFIG_SUN4I
 	sunxi_io_write(hdmi, SUNXI_HDMI_TX_DRIVER1, 0x00D8C820);
-	sunxi_io_write(hdmi, SUNXI_HDMI_TX_DRIVER2, 0xD2000008);
+#else
+	sunxi_io_write(hdmi, SUNXI_HDMI_TX_DRIVER1, 0x00d8c830);
+#endif
+	sunxi_io_write(hdmi, SUNXI_HDMI_TX_DRIVER2, 0xfa4ef708);
 	sunxi_io_write(hdmi, SUNXI_HDMI_TX_DRIVER3, 0);
 
 	/* Use PLL3, setup clk div and doubler */
